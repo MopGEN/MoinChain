@@ -1,0 +1,5 @@
+Prueba de persistencia (seccion 4.3): se detuvo ms-auth y se volvio a arrancar.
+Tras reiniciar la aplicacion:
+bloques persistidos: 4 (ids: 1,2,3,4 )   <- 3 de la demo + 1 del login usado para consultar
+CADENA CORRUPTA: 1 problema(s) detectado(s) en 4 bloque(s) bloque 2 HASH_ALTERADO
+(los bloques siguen en MongoDB y la alteracion del bloque 2 sigue detectandose)

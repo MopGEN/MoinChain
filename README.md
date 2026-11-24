@@ -1,5 +1,9 @@
 <img width="640" height="480" alt="pintar-pait" src="https://github.com/user-attachments/assets/cb5583c7-09d5-47f7-a5bf-ec1f05b26eb1" />
 
+> **MoinChain (proyecto de Criptografía):** esta copia añade una cadena de auditoría con hash
+> (mini-blockchain) en `ms-auth`. Ver [`monpoint-ms/ms-auth/docs/cadena/README.md`](monpoint-ms/ms-auth/docs/cadena/README.md)
+> y [`docs/CRIPTO_CHECKLIST.md`](docs/CRIPTO_CHECKLIST.md).
+
 # MonPoint
 
 Sistema de gestión para punto de venta (POS) enfocado en la administración

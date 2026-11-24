@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/register").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/auth/usuarios").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/auth/usuarios/{id}/desactivar").hasRole("ADMIN")
+                        // Cadena de auditoría (proyecto de Criptografía): solo ADMIN, cualquier método.
+                        .requestMatchers("/auth/cadena", "/auth/cadena/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
                         // Quién puede modificar a quién lo decide UsuarioServiceImpl.
                         .requestMatchers(HttpMethod.PUT, "/auth/usuarios/{id}").authenticated()

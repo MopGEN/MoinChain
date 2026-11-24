@@ -1,0 +1,148 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>MoinChain: cadena de auditoría con hash</title>
+<style>
+@page{size:Letter;margin:2.2cm 2.4cm}
+body{font-family:"Times New Roman",serif;font-size:10.5pt;line-height:1.32;color:#000;text-align:justify}
+h1{font-size:17pt;text-align:center;margin:0 0 6pt}
+.aut{text-align:center;margin-bottom:10pt}
+h2{font-size:12pt;margin:13pt 0 4pt}h3{font-size:10.5pt;margin:9pt 0 3pt}
+.abs{font-size:9.5pt;margin:0 1cm 8pt}
+table{border-collapse:collapse;margin:6pt auto;font-size:9pt}td,th{border:1px solid #444;padding:2pt 6pt}
+pre{font-family:Consolas,monospace;font-size:7.4pt;line-height:1.2;background:#f2f2f2;border:1px solid #bbb;padding:5pt;white-space:pre-wrap;word-break:break-all;margin:0;text-align:left}
+figure{margin:7pt 0;break-inside:avoid}figcaption{font-size:9pt;text-align:center;margin-top:2pt}
+code{font-family:Consolas,monospace;font-size:9pt}
+ol,ul{margin:3pt 0 3pt 16pt;padding:0}
+</style></head><body>
+<h1>MoinChain: base de datos encadenada con hash (mini-blockchain) como bitácora de auditoría</h1>
+<div class="aut">Víctor Ortiz<br>Universidad de Guadalajara · Proyecto final IH063 – Criptografía · Noviembre de 2026</div>
+<div class="abs"><b>Resumen.</b> Se implementó una cadena de registros enlazados con SHA-256 dentro del microservicio de autenticación de un sistema de punto de venta. Cada evento de seguridad (inicio de sesión, alta, modificación o baja de usuarios) se guarda como un bloque cuyo hash depende del bloque anterior, de modo que modificar cualquier registro pasado rompe la cadena y la verificación lo detecta. El documento describe la estructura de datos, el encadenamiento, las pruebas con evidencia real, las limitaciones y las mejoras posibles.<br><b>Palabras clave:</b> SHA-256, blockchain, integridad, bitácora de auditoría, detección de alteraciones.</div>
+
+<h2>1 Introducción</h2>
+<p>Una <b>función hash criptográfica</b> transforma una entrada de cualquier tamaño en una salida de tamaño fijo (SHA-256 produce 256 bits, es decir, 64 caracteres hexadecimales). Es determinista, rápida de calcular, no se puede invertir en la práctica y cualquier cambio mínimo en la entrada produce un resultado completamente distinto (efecto avalancha) [1]. Por eso sirve como "huella digital" de unos datos.</p>
+<p>La idea básica de una <b>blockchain</b> es que cada bloque incluye el hash del bloque anterior [2]. Así, modificar un bloque cambia su hash, lo que invalida el campo <code>prev_hash</code> del siguiente, y así sucesivamente hasta el final: la alteración queda en evidencia. Este proyecto simula esa idea de forma rudimentaria, sin consenso distribuido, minería ni red P2P, como pide el planteamiento de la actividad.</p>
+<p><b>Dónde se aplica.</b> El microservicio <code>ms-auth</code> ya generaba una bitácora de eventos de seguridad, pero solo como líneas de log, que cualquiera con acceso al servidor puede editar sin dejar rastro. Al convertir esa bitácora en una cadena, un cambio posterior se vuelve detectable.</p>
+
+<h2>2 Estructura de datos y lógica de encadenamiento</h2>
+<p>Cada bloque se guarda como un documento en la colección <code>cadena_auditoria</code> de MongoDB:</p>
+<table><tr><th>Campo</th><th>Descripción</th></tr>
+<tr><td><code>id</code></td><td>Número de bloque, consecutivo desde 1; es la clave primaria</td></tr>
+<tr><td><code>timestamp</code></td><td>Fecha y hora de creación, con precisión de milisegundos</td></tr>
+<tr><td><code>datos</code></td><td>El evento registrado, p. ej. <code>evento=LOGIN_EXITOSO …</code></td></tr>
+<tr><td><code>prev_hash</code></td><td><code>hash_actual</code> del bloque anterior (64 ceros en el primero)</td></tr>
+<tr><td><code>hash_actual</code></td><td>SHA-256 de <code>id | timestamp | datos | prev_hash</code></td></tr></table>
+<p>La fórmula implementada es <code>hash_actual = SHA-256(id ‖ timestamp ‖ datos ‖ prev_hash)</code>, con las siguientes decisiones de diseño:</p>
+<ul>
+<li><b>Timestamp como milisegundos desde 1970:</b> es un número, sin ambigüedad de formato. Se trunca a milisegundos antes de hashear porque MongoDB no guarda más precisión; con nanosegundos el hash recalculado al releer no coincidiría y la cadena parecería corrupta sin que nadie la hubiera tocado.</li>
+<li><b>Separador <code>|</code>:</b> no genera ambigüedad aunque <code>datos</code> contenga barras, pues <code>id</code> y <code>timestamp</code> son numéricos y <code>prev_hash</code> mide siempre 64 caracteres.</li>
+<li><b>Bloque génesis:</b> el primer bloque usa 64 ceros como <code>prev_hash</code>.</li>
+<li><b>Concurrencia:</b> dos eventos simultáneos podrían leer el mismo último bloque y bifurcar la cadena. Como el número de bloque es clave primaria, la inserción duplicada falla y se reintenta con el número siguiente (hasta 5 veces).</li>
+<li><b>Tolerancia a fallos:</b> si la cadena no se puede escribir, el error se registra en el log pero no impide el inicio de sesión.</li>
+</ul>
+<h3>Verificación de integridad</h3>
+<p>La verificación recorre los bloques en orden y, para cada uno: (1) comprueba que su número sea el esperado; (2) recalcula su hash y lo compara con el almacenado; (3) comprueba que su <code>prev_hash</code> coincida con el <code>hash_actual</code> del anterior. No se detiene en el primer error: reporta todos los bloques dañados, con el motivo (<code>HASH_ALTERADO</code>, <code>ENLACE_ROTO</code> o <code>BLOQUE_FALTANTE</code>). La lógica es una clase pura que no toca la base de datos, por lo que se prueba con listas en memoria.</p>
+
+<h2>3 Implementación</h2>
+<p>El código nuevo vive en el paquete <code>com.monpoint.auth.cadena</code> (Java, Spring Boot, MongoDB). Las clases principales son <code>CalculadorHash</code> (la fórmula), <code>BloqueAuditoria</code> (el registro), <code>VerificadorCadena</code> (la verificación), <code>CadenaService</code> (agregar, listar, verificar) y <code>CadenaController</code>. El servicio <code>AuthAuditService</code> agrega un bloque por cada evento de seguridad. La API, restringida al rol ADMIN, ofrece:</p>
+<ul><li><code>POST /auth/cadena</code>: agrega un registro al final de la cadena;</li><li><code>GET /auth/cadena</code>: muestra todos los registros con sus hashes;</li><li><code>GET /auth/cadena/verificar</code>: verifica la cadena y reporta si es válida o dónde se alteró.</li></ul>
+<p>La persistencia usa MongoDB, de modo que los registros siguen ahí al reiniciar la aplicación. El proyecto incluye 21 pruebas automáticas nuevas (97 en total en el servicio, todas pasan): 10 del núcleo criptográfico (cadena válida, dato alterado, atacante que recalcula el hash, bloque eliminado, génesis manipulado, varios daños a la vez), 5 de la lógica de agregado y 6 de la API y sus permisos.</p>
+
+<h2>4 Resultados: capturas de la aplicación</h2>
+<p>Las figuras muestran la salida real del script de demostración (<code>docs/cadena/demo.sh</code>) ejecutado contra MongoDB.</p>
+<figure><pre>-&gt; Login fallido (contraseña incorrecta)
+HTTP 401
+-&gt; Login exitoso del ADMIN
+token obtenido (oculto)
+-&gt; Registro manual (POST /auth/cadena)
+{
+  "id": 3,
+  "timestamp": "2026-11-24T22:41:00.445Z",
+  "datos": "nota manual: inicio de la demostracion",
+  "prevHash": "50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86",
+  "hashActual": "2d76e7ee1ea979291b017ce3f9f3c0e7678011fb3522b92deeaed7b64f574eb4"
+}</pre><figcaption>Figura 1. Agregando registros: un login fallido, uno exitoso y un registro manual. Cada bloque queda enlazado al anterior.</figcaption></figure>
+<figure><pre>[
+  {
+    "id": 1,
+    "timestamp": "2026-11-24T22:40:59.955Z",
+    "datos": "evento=LOGIN_FALLIDO correo=victor.ortiz@autotachi.mx motivo=PASSWORD_INCORRECTA",
+    "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hashActual": "e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc"
+  },
+  {
+    "id": 2,
+    "timestamp": "2026-11-24T22:41:00.370Z",
+    "datos": "evento=LOGIN_EXITOSO usuarioId=6b0612422191a1ab5ac4b53b correo=victor.ortiz@autotachi.mx rol=ADMIN",
+    "prevHash": "e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc",
+    "hashActual": "50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86"
+  },
+  {
+    "id": 3,
+    "timestamp": "2026-11-24T22:41:00.445Z",
+    "datos": "nota manual: inicio de la demostracion",
+    "prevHash": "50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86",
+    "hashActual": "2d76e7ee1ea979291b017ce3f9f3c0e7678011fb3522b92deeaed7b64f574eb4"
+  }
+]</pre><figcaption>Figura 2. Mostrando la cadena en orden, con id, datos, prev_hash y hash_actual. El prev_hash de cada bloque es el hash_actual del anterior.</figcaption></figure>
+<figure><pre>{
+  "valida": true,
+  "totalBloques": 3,
+  "problemas": [],
+  "mensaje": "Cadena válida: 3 bloque(s) verificados, sin alteraciones"
+}</pre><figcaption>Figura 3. Verificación de la cadena intacta: válida, sin problemas.</figcaption></figure>
+<figure><pre>{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedCount: 0
+}</pre><figcaption>Figura 4. Simulación de ataque: se modifica el bloque 2 directamente en MongoDB, sin pasar por la aplicación.</figcaption></figure>
+<figure><pre>{
+  "valida": false,
+  "totalBloques": 3,
+  "problemas": [
+    {
+      "bloqueId": 2,
+      "tipo": "HASH_ALTERADO",
+      "detalle": "El hash guardado no coincide con el recalculado: el contenido del bloque fue modificado"
+    }
+  ],
+  "mensaje": "CADENA CORRUPTA: 1 problema(s) detectado(s) en 3 bloque(s)"
+}</pre><figcaption>Figura 5. Detección de la alteración: la verificación señala el bloque 2 con el tipo HASH_ALTERADO.</figcaption></figure>
+<h3>Comprobaciones adicionales</h3>
+<p><b>Verificación independiente.</b> Para descartar que el hash dependa de la implementación en Java, se recalculó el hash del bloque 1 con un programa distinto (Node.js) usando solo los campos guardados en MongoDB; el resultado coincide:</p>
+<figure><pre>Bloque 1 - hash guardado en MongoDB : e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc
+Bloque 1 - hash recalculado en Node : e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc
+Coinciden: true</pre><figcaption>Figura 6. Mismo hash obtenido por una implementación independiente.</figcaption></figure>
+<p><b>Persistencia.</b> Se detuvo y volvió a arrancar el servicio: los bloques siguen en MongoDB y la alteración del bloque 2 continúa detectándose (<code>docs/cadena/persistencia.txt</code>).</p>
+<p><b>Atacante que recalcula el hash.</b> Una prueba automática cubre el caso más hábil: quien modifica los datos de un bloque y además recalcula su hash lo deja coherente consigo mismo, pero el bloque siguiente deja de apuntar a él y se reporta <code>ENLACE_ROTO</code> en ese bloque. Esto muestra por qué se encadenan los hashes en lugar de hashear cada registro por separado.</p>
+
+<h2>5 Limitaciones</h2>
+<p>El sistema <b>no</b> es una blockchain completa:</p>
+<ul>
+<li><b>Un solo nodo y una sola base de datos:</b> no hay consenso ni réplicas independientes. Quien controle <i>toda</i> la base de datos puede cambiar un bloque y recalcular los hashes de <i>todos</i> los siguientes; la cadena resultante parecería válida.</li>
+<li><b>Sin firma digital:</b> el hash prueba integridad, pero no quién creó el bloque (no hay autenticidad ni no repudio).</li>
+<li><b>Truncado final:</b> si se borran los últimos bloques, la cadena restante sigue siendo válida; no se detecta sin un valor de referencia externo.</li>
+<li><b>Sin minería ni prueba de trabajo:</b> agregar bloques es barato y no hay un costo que dificulte reescribir la historia.</li>
+<li><b>Datos en claro:</b> los eventos incluyen correos; el hash protege su integridad, no su confidencialidad. Por eso la API es solo para ADMIN.</li>
+<li><b>Rendimiento:</b> la verificación lee toda la colección, lo cual no escala a millones de bloques sin paginar o verificar por tramos.</li>
+</ul>
+
+<h2>6 Posibles mejoras</h2>
+<ul>
+<li><b>Firmar cada bloque</b> con una llave privada del servicio (por ejemplo ECDSA o Ed25519), para probar autenticidad y que un atacante sin la llave no pueda recalcular bloques válidos.</li>
+<li><b>Anclar externamente</b> el último hash (correo, otro servicio, un sello de tiempo) para detectar el truncado final.</li>
+<li><b>Múltiples nodos</b> que replican la cadena y comparan sus hashes, acercándose a un esquema distribuido con consenso.</li>
+<li><b>Árbol de Merkle</b> por lotes de bloques, para verificar de forma incremental un bloque sin recorrer toda la cadena.</li>
+<li><b>Verificación periódica automática</b> con alerta, en lugar de solo bajo demanda.</li>
+</ul>
+
+<h2>7 Conclusiones</h2>
+<p>Con una sola función hash y un campo que apunta al registro anterior se obtiene una bitácora cuya manipulación es detectable y localizable. La parte criptográfica es pequeña; la mayor parte del cuidado está en detalles de ingeniería: la precisión del timestamp, un formato de entrada sin ambigüedad, la concurrencia y que la bitácora nunca impida la operación del sistema. Las limitaciones muestran qué aporta una blockchain real más allá del encadenamiento: firma, replicación y consenso.</p>
+
+<h2>Referencias</h2>
+<ol>
+<li>National Institute of Standards and Technology: Secure Hash Standard (SHS), FIPS PUB 180-4 (2015).</li>
+<li>Nakamoto, S.: Bitcoin: A Peer-to-Peer Electronic Cash System (2008).</li>
+<li>Repositorio del proyecto: github.com/MopGEN/MoinChain, ruta <code>monpoint-ms/ms-auth</code>.</li>
+</ol>
+</body></html>

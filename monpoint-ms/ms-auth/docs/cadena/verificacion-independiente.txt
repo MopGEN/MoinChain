@@ -1,0 +1,3 @@
+Bloque 1 - hash guardado en MongoDB : e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc
+Bloque 1 - hash recalculado en Node : e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc
+Coinciden: true

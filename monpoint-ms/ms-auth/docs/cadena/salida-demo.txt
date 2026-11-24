@@ -1,0 +1,70 @@
+
+==================== 1. AGREGAR registros (cada evento de seguridad crea un bloque) ====================
+-> Login fallido (contraseña incorrecta)
+HTTP 401
+-> Login exitoso del ADMIN
+token obtenido (oculto)
+-> Registro manual (POST /auth/cadena)
+{
+  "id": 3,
+  "timestamp": "2026-11-24T22:41:00.445Z",
+  "datos": "nota manual: inicio de la demostracion",
+  "prevHash": "50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86",
+  "hashActual": "2d76e7ee1ea979291b017ce3f9f3c0e7678011fb3522b92deeaed7b64f574eb4"
+}
+
+==================== 2. MOSTRAR la cadena (GET /auth/cadena) ====================
+[
+  {
+    "id": 1,
+    "timestamp": "2026-11-24T22:40:59.955Z",
+    "datos": "evento=LOGIN_FALLIDO correo=victor.ortiz@autotachi.mx motivo=PASSWORD_INCORRECTA",
+    "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hashActual": "e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc"
+  },
+  {
+    "id": 2,
+    "timestamp": "2026-11-24T22:41:00.370Z",
+    "datos": "evento=LOGIN_EXITOSO usuarioId=6b0612422191a1ab5ac4b53b correo=victor.ortiz@autotachi.mx rol=ADMIN",
+    "prevHash": "e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc",
+    "hashActual": "50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86"
+  },
+  {
+    "id": 3,
+    "timestamp": "2026-11-24T22:41:00.445Z",
+    "datos": "nota manual: inicio de la demostracion",
+    "prevHash": "50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86",
+    "hashActual": "2d76e7ee1ea979291b017ce3f9f3c0e7678011fb3522b92deeaed7b64f574eb4"
+  }
+]
+
+==================== 3. VERIFICAR la cadena intacta (GET /auth/cadena/verificar) ====================
+{
+  "valida": true,
+  "totalBloques": 3,
+  "problemas": [],
+  "mensaje": "Cadena válida: 3 bloque(s) verificados, sin alteraciones"
+}
+
+==================== 4. ATAQUE: modificar el bloque 2 directamente en MongoDB (sin pasar por la aplicación) ====================
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedCount: 0
+}
+
+==================== 5. VERIFICAR otra vez: la alteración debe detectarse ====================
+{
+  "valida": false,
+  "totalBloques": 3,
+  "problemas": [
+    {
+      "bloqueId": 2,
+      "tipo": "HASH_ALTERADO",
+      "detalle": "El hash guardado no coincide con el recalculado: el contenido del bloque fue modificado"
+    }
+  ],
+  "mensaje": "CADENA CORRUPTA: 1 problema(s) detectado(s) en 3 bloque(s)"
+}
