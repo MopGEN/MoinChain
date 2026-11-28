@@ -34,8 +34,9 @@
 - Nunca hacer `push` de trabajo de criptografía a MonPoint ni al revés. En MoinChain, `git push` va a `origin` (MoinChain).
 - MonPoint tiene trabajo sin guardar de otra persona/otra tarea (inventario, clientes, diagramas); **no tocarlo**.
 - La base de MoinChain es el estado de MonPoint en el commit `301ea19` (18 de noviembre de 2026). MonPoint no ha avanzado desde entonces.
-- Estado de Git de MoinChain: `main` = `origin/main` = commit `440596a` ("Agrega cadena de auditoría con hash
-  (mini-blockchain) en ms-auth"). La rama `cripto/cadena-auditoria` apunta al mismo commit.
+- Estado de Git de MoinChain: todo está en `main` (= `origin/main`). El commit `440596a` ("Agrega cadena de auditoría con hash
+  (mini-blockchain) en ms-auth") contiene el código, las pruebas, el README, las evidencias, el checklist y el informe; un commit
+  posterior agrega este documento y la presentación. La rama `cripto/cadena-auditoria` se mantiene igual que `main`.
 - `CLAUDE.md` en MoinChain existe **solo en local** (está en `.gitignore`); describe el proyecto y no se sube.
 
 ---
