@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoinChain · MonPoint con criptografía</title>
+<meta name="description" content="MonPoint: un punto de venta reconstruido como microservicios, con una cadena de auditoría protegida por hash (MoinChain).">
+<style>
+:root{
+  --disp:"Bahnschrift","DIN Alternate","Arial Narrow","Segoe UI",system-ui,sans-serif;
+  --txt:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --mono:"Cascadia Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+  --verde:#00ad62;--marino:#00245f;--marino-hondo:#001a45;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#00245f;color:#f4f8fc;font:21px/1.5 var(--txt);-webkit-font-smoothing:antialiased}
+/* Esquemas: oscuro (.d) y papel (.l) alternados */
+.d{--bg:#00245f;--card:#012f78;--fg:#f4f8fc;--mut:#a9bbd6;--line:#1f4a8f;--ac:#00ad62;--ok:#3fe39a;--warn:#f2c14e;--bad:#ff8a7a}
+.l{--bg:#f2f5f8;--card:#e2e8f0;--fg:#00245f;--mut:#4e5a6b;--line:#c8d1dc;--ac:#007c53;--ok:#007c53;--warn:#8a5200;--bad:#b3261e}
+section,header.hero{background:var(--bg);color:var(--fg);min-height:100vh;padding:92px 0 40px;display:flex;align-items:center;position:relative}
+.wrap{width:100%;max-width:1280px;margin:0 auto;padding:0 40px}
+h1,h2,h3{font-family:var(--disp);margin:0;line-height:1.02;text-transform:uppercase;letter-spacing:-.005em}
+h2{font-size:clamp(2.2rem,4.4vw,4rem);font-weight:700;max-width:22ch}
+h2 em{font-style:normal;color:var(--ac)}
+h3{font-size:1.25rem;font-weight:600;letter-spacing:.02em}
+p{margin:0}
+.mono,.kick{font-family:var(--mono)}
+.kick{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ac);display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.kick::before{content:"";width:34px;height:2px;background:var(--ac)}
+.sub{color:var(--mut);margin-top:18px;max-width:44ch;font-size:1.05rem}
+
+/* Barra superior */
+nav{position:fixed;inset:0 0 auto 0;z-index:100;background:#001a45ee;backdrop-filter:blur(8px);border-bottom:1px solid #1f4a8f;color:#f4f8fc}
+nav .wrap{display:flex;align-items:center;gap:6px;height:64px}
+.marca{display:flex;align-items:center;gap:10px;font:700 1.15rem var(--disp);letter-spacing:.06em;text-transform:uppercase;color:#f4f8fc;text-decoration:none;margin-right:auto}
+.marca svg{width:30px;height:30px}
+.menu{position:relative}
+.menu>button{background:none;border:0;color:#cfdcf0;font:600 .92rem var(--disp);letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.menu>button::after{content:"";width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg) translateY(-2px);transition:transform .25s}
+.menu:hover>button,.menu.abierto>button,.menu:focus-within>button{color:#fff}
+.menu:hover>button::after,.menu.abierto>button::after,.menu:focus-within>button::after{transform:rotate(225deg) translate(-2px,0)}
+.panel{position:absolute;top:100%;left:0;min-width:270px;background:#00245f;border:1px solid #2a5aa8;border-top:3px solid var(--verde);padding:8px;opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .22s,transform .22s,visibility .22s;box-shadow:8px 8px 0 #001a4599}
+.menu:hover .panel,.menu.abierto .panel,.menu:focus-within .panel{opacity:1;visibility:visible;transform:none}
+.panel a{display:block;padding:10px 12px;color:#e6eefa;text-decoration:none;font-size:.95rem;border-left:3px solid transparent}
+.panel a small{display:block;color:#9fb4d6;font-size:.78rem;font-family:var(--mono)}
+.panel a:hover,.panel a:focus{background:#0a3580;border-left-color:var(--verde);outline:none}
+.auto{margin-left:12px;border:1px solid #2a5aa8;background:none;color:#f4f8fc;font:600 .8rem var(--mono);letter-spacing:.08em;padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.auto i{width:9px;height:9px;border-radius:50%;background:#8aa0c4}
+.auto.on i{background:var(--verde);animation:parpadeo 1.2s infinite}
+@keyframes parpadeo{50%{opacity:.25}}
+#progreso{position:fixed;top:0;left:0;height:3px;width:0;background:var(--verde);z-index:200}
+
+/* Portada */
+.hero{overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:56px 56px;opacity:.35;-webkit-mask-image:radial-gradient(ellipse at 70% 50%,#000 10%,transparent 70%);mask-image:radial-gradient(ellipse at 70% 50%,#000 10%,transparent 70%)}
+.hero .wrap{display:grid;grid-template-columns:1fr 1.05fr;gap:20px;align-items:center;position:relative}
+.hero h1{font-size:clamp(3.6rem,9vw,8rem);font-weight:700;letter-spacing:-.02em}
+.hero h1 span{color:var(--verde)}
+.lema{font-size:clamp(1.15rem,1.9vw,1.55rem);margin-top:18px;max-width:24ch;line-height:1.25}
+.hero-cifras{display:flex;gap:28px;margin-top:34px;flex-wrap:wrap}
+.hero-cifras div{border-left:3px solid var(--verde);padding-left:12px}
+.hero-cifras b{display:block;font:700 2.6rem var(--disp);line-height:1}
+.hero-cifras span{font:.74rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.consola{margin-top:30px;border:1px solid var(--line);background:#001a45;padding:14px 16px;font:.95rem/1.5 var(--mono);max-width:520px;min-height:76px}
+.consola .m{color:#8fb8ff}.consola .ok{color:var(--ok)}.consola .bad{color:var(--bad)}
+.consola div{animation:entra .5s}
+@keyframes entra{from{opacity:0;transform:translateY(6px)}}
+.logo-mov{width:100%;height:auto;max-height:78vh}
+.giro{transform-origin:320px 320px;animation:gira 60s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.giro2{transform-origin:320px 320px;animation:gira 40s linear infinite reverse}
+.latido{transform-origin:320px 320px;animation:latido 2.4s ease-in-out infinite}
+@keyframes latido{50%{transform:scale(1.06)}}
+
+/* Etiquetas y bloques */
+.caja{border:1.5px solid var(--fg);background:var(--card);padding:22px 24px;box-shadow:7px 7px 0 var(--fg)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start}
+@media(max-width:900px){.cols,.hero .wrap{grid-template-columns:1fr}.wrap{padding:0 22px}}
+
+/* Antes / ahora */
+.apila{display:grid;gap:7px;margin:16px 0}
+.apila div{border:1.5px solid var(--fg);padding:9px 12px;font:600 .9rem var(--mono);text-transform:uppercase;letter-spacing:.05em;text-align:center}
+.apila.uno div{background:#c8d1dc;color:#00245f;border-color:#00245f}
+.malla{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:16px 0}
+.malla div{border:1.5px solid var(--fg);padding:9px 12px;font:600 .9rem var(--mono);text-transform:uppercase;letter-spacing:.05em;text-align:center;background:var(--ac);color:#fff;border-color:var(--fg)}
+.caja h3 .tag{font:.72rem var(--mono);color:var(--mut);letter-spacing:.1em;display:block;margin-bottom:6px}
+.caja p{color:var(--mut);font-size:1rem}
+
+/* Mapa */
+.mapa{display:grid;grid-template-columns:1.2fr 1fr;gap:34px;align-items:stretch;margin-top:34px}
+@media(max-width:900px){.mapa{grid-template-columns:1fr}}
+.lienzo{border:1.5px solid var(--line);padding:22px;background:var(--card)}
+.fila{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:7px 0}
+.nodo{border:1.5px solid var(--line);background:var(--bg);color:var(--fg);padding:9px 14px;font:600 .95rem var(--disp);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:.15s}
+.nodo small{display:block;font:.7rem var(--mono);color:var(--mut);letter-spacing:0;text-transform:none}
+.nodo:hover{border-color:var(--ac);transform:translateY(-2px)}
+.nodo.sel{background:var(--ac);color:#00245f;border-color:var(--ac)}
+.nodo.sel small{color:#00245f}
+.nodo.infra{border-style:dashed}
+.sep{text-align:center;font:.72rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:8px 0}
+.detalle h3{font-size:2.2rem;font-weight:700;margin-bottom:6px}
+.detalle .rol{font:.8rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin-bottom:16px}
+.detalle dt{font:.72rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-top:14px}
+.detalle dd{margin:3px 0 0;font-size:1.1rem}
+
+/* Acordeón de herramientas */
+.acordeon{margin-top:30px;border-top:1.5px solid var(--fg)}
+.item{border-bottom:1.5px solid var(--fg)}
+.item>button{width:100%;background:none;border:0;color:var(--fg);display:grid;grid-template-columns:64px 1fr 34px;align-items:center;text-align:left;padding:9px 4px;cursor:pointer;font:700 clamp(1.3rem,2.1vw,1.8rem) var(--disp);text-transform:uppercase;letter-spacing:.01em}
+.item>button .n{font:.8rem var(--mono);color:var(--ac);letter-spacing:.1em}
+.item>button .mas{width:22px;height:22px;position:relative;justify-self:end}
+.item>button .mas::before,.item>button .mas::after{content:"";position:absolute;background:var(--fg);left:0;top:10px;width:22px;height:2.5px;transition:transform .3s}
+.item>button .mas::after{transform:rotate(90deg)}
+.item.abre>button .mas::after{transform:rotate(0)}
+.item>button:hover{color:var(--ac)}
+.cuerpo{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease}
+.item.abre .cuerpo{grid-template-rows:1fr}
+.cuerpo>div{overflow:hidden}
+.cuerpo .dos{display:grid;grid-template-columns:1fr 1fr;gap:30px;padding:2px 4px 22px 68px}
+.cuerpo small{display:block;font:.72rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.cuerpo p{font-size:1.1rem}
+@media(max-width:700px){.cuerpo .dos{grid-template-columns:1fr;padding-left:4px}}
+
+/* Venta */
+.venta{display:grid;grid-template-columns:1fr 1.1fr;gap:36px;margin-top:30px;align-items:start}
+@media(max-width:900px){.venta{grid-template-columns:1fr}}
+.pasos{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.pasos li{display:grid;grid-template-columns:42px 1fr;gap:6px;padding:8px 6px;border-bottom:1px solid var(--line);cursor:pointer;opacity:.5;transition:.25s}
+.pasos li .num{font:700 1.1rem var(--mono);color:var(--mut)}
+.pasos li b{font:600 1.1rem var(--disp);text-transform:uppercase;letter-spacing:.03em}
+.pasos li div span{display:none;color:var(--mut);font-size:.95rem}
+.pasos li.hecho{opacity:.75}
+.pasos li.on{opacity:1;background:var(--card);border-left:4px solid var(--ok)}
+.pasos li.on .num{color:var(--ok)}
+.pasos li.on div span{display:block}
+.pasos li.mal.on{border-left-color:var(--bad)}
+.pasos li.mal.on .num{color:var(--bad)}
+.escena{border:1.5px solid var(--line);background:var(--card);padding:16px}
+.escena svg{width:100%;height:auto;display:block}
+.zona{fill:var(--bg);stroke:var(--line);stroke-width:2}
+.zona.act{stroke:var(--ok);fill:color-mix(in srgb,var(--ok) 18%,var(--bg))}
+.zona.err{stroke:var(--bad);fill:color-mix(in srgb,var(--bad) 18%,var(--bg))}
+.zt{fill:var(--fg);font:700 14px "Bahnschrift","Segoe UI",sans-serif;text-anchor:middle;text-transform:uppercase;letter-spacing:.04em}
+.zs{fill:var(--mut);font:11px "Cascadia Mono",Consolas,monospace;text-anchor:middle}
+.ruta{stroke:var(--line);stroke-width:3;fill:none;stroke-dasharray:6 6}
+.ruta.act{stroke:var(--ok);stroke-dasharray:none}
+.ruta.err{stroke:var(--bad);stroke-dasharray:none}
+.sobre{fill:var(--ok);transition:transform .7s cubic-bezier(.5,0,.2,1)}
+.sobre.err{fill:var(--bad)}
+.leyenda{margin-top:12px;padding:12px 14px;border:1.5px solid var(--fg);font-size:1rem;min-height:4.1em}
+.controles{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
+.bt{border:1.5px solid var(--fg);background:none;color:var(--fg);font:700 .85rem var(--disp);letter-spacing:.1em;text-transform:uppercase;padding:9px 16px;cursor:pointer}
+.bt:hover{background:var(--fg);color:var(--bg)}
+.bt:disabled{opacity:.35;cursor:default}
+.interruptor{display:flex;gap:10px;align-items:center;font:.82rem var(--mono);letter-spacing:.04em;cursor:pointer;color:var(--mut)}
+.interruptor input{accent-color:var(--ac);width:18px;height:18px}
+
+/* Código */
+.pestanas{display:flex;gap:0;margin-top:30px;border-bottom:1.5px solid var(--fg);flex-wrap:wrap}
+.pestanas button{background:none;border:1.5px solid transparent;border-bottom:0;color:var(--mut);font:700 1rem var(--disp);text-transform:uppercase;letter-spacing:.06em;padding:12px 20px;cursor:pointer}
+.pestanas button.on{background:var(--fg);color:var(--bg)}
+.panelcod{display:none;grid-template-columns:1.1fr 1fr;gap:34px;padding-top:26px;align-items:start}
+.panelcod.on{display:grid;animation:entra .45s}
+@media(max-width:900px){.panelcod{grid-template-columns:1fr}}
+.panelcod h3{font-size:2rem;margin-bottom:10px}
+.panelcod p{font-size:1.15rem;color:var(--mut);max-width:34ch}
+pre.codigo{margin:0;background:#001a45;color:#e6eefa;padding:20px;font:.92rem/1.6 var(--mono);overflow:auto;border:1.5px solid var(--fg);box-shadow:7px 7px 0 var(--fg)}
+.codigo .c{color:#7f95b8}.codigo .k{color:#8fb8ff}.codigo .s{color:#3fe39a}.codigo .n{color:#ffd479}
+.fuente{font:.72rem var(--mono);color:var(--mut);margin-top:10px}
+
+/* Valor */
+.balance{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:34px}
+@media(max-width:900px){.balance{grid-template-columns:1fr}}
+.balance h3{font-size:1.9rem;margin-bottom:14px;padding-bottom:10px;border-bottom:3px solid var(--ok)}
+.balance .cuesta h3{border-color:var(--warn)}
+.balance ul{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.balance li{padding-left:34px;position:relative;font-size:1.15rem}
+.balance li::before{content:"+";position:absolute;left:0;top:-2px;font:700 1.5rem var(--disp);color:var(--ok)}
+.cuesta li::before{content:"!";color:var(--warn)}
+.balance li small{display:block;color:var(--mut);font-size:.92rem}
+.nota{margin-top:30px;border-left:5px solid var(--ac);padding:4px 0 4px 18px;font-size:1.1rem;max-width:70ch}
+
+/* Trabajo */
+.linea{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:34px;border-top:3px solid var(--fg)}
+@media(max-width:900px){.linea{grid-template-columns:1fr 1fr}}
+.paso{padding:16px 18px 16px 0;position:relative}
+.paso::before{content:"";position:absolute;top:-9px;left:0;width:15px;height:15px;background:var(--ac);border:3px solid var(--bg);border-radius:50%}
+.paso h3{margin-top:12px;font-size:1.3rem}
+.paso p{font-size:.98rem;color:var(--mut);margin-top:6px}
+.nums{display:flex;gap:46px;flex-wrap:wrap;margin-top:40px}
+.nums b{display:block;font:700 4rem var(--disp);line-height:1;color:var(--ac)}
+.nums span{font:.78rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.aprende{margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+@media(max-width:900px){.aprende{grid-template-columns:1fr}}
+.aprende p{font:700 1.45rem/1.15 var(--disp);text-transform:uppercase;border-top:3px solid var(--fg);padding-top:12px}
+footer{background:#001a45;color:#a9bbd6;font:.78rem var(--mono);letter-spacing:.05em;padding:22px 40px;text-align:center}
+:focus-visible{outline:3px solid var(--verde);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+
+/* ===== Criptografía (MoinChain) ===== */
+.entrada{width:100%;margin-top:14px;background:var(--bg);color:var(--fg);border:1.5px solid var(--fg);padding:10px 12px;font:.95rem var(--mono)}
+.hl{margin-top:10px}
+.hl small{display:block;font:.7rem var(--mono);letter-spacing:.14em;color:var(--mut)}
+.hl code{display:block;font:.8rem/1.35 var(--mono);word-break:break-all;color:var(--fg)}
+.hl mark{background:var(--bad);color:#fff;padding:0 1px}
+.log{margin-top:16px;border:1.5px solid var(--line);background:var(--bg);padding:12px 14px;font:.82rem/1.6 var(--mono);color:var(--mut)}
+.log .bad{color:var(--bad)}
+.formula{margin-top:26px;font:700 clamp(1rem,1.9vw,1.5rem) var(--mono);padding:16px 20px;border:1.5px solid var(--fg);background:var(--card);box-shadow:7px 7px 0 var(--fg);overflow:auto}
+.formula b{color:var(--ac)}
+.bloques{display:grid;grid-template-columns:repeat(3,1fr);gap:34px;margin-top:26px}
+.bq{border:1.5px solid var(--fg);background:var(--card);padding:14px 16px;position:relative;transition:.2s}
+.bloques .bq:not(:last-child)::after{content:"→";position:absolute;right:-27px;top:50%;font:700 1.6rem var(--disp);color:var(--ac)}
+.bq-h{font:700 1.15rem var(--disp);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.bq dl{margin:0}
+.bq dt{font:.68rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-top:8px}
+.bq dd{margin:2px 0 0;font:.82rem/1.35 var(--mono);word-break:break-word}
+.chip{display:inline-block;padding:2px 7px;color:#fff;font:600 .8rem var(--mono)}
+.chip.g{background:#6b7a90}.chip.c1{background:#007c53}.chip.c2{background:#b36b00}.chip.c3{background:#1f5fbf}
+.tabs2{display:flex;margin-top:30px;border-bottom:1.5px solid var(--fg);flex-wrap:wrap}
+.tabs2 button{background:none;border:1.5px solid transparent;border-bottom:0;color:var(--mut);font:700 1rem var(--disp);text-transform:uppercase;letter-spacing:.06em;padding:12px 20px;cursor:pointer}
+.tabs2 button.on{background:var(--fg);color:var(--bg)}
+.pc2{display:none;grid-template-columns:1fr 1.1fr;gap:34px;padding-top:24px;align-items:start}
+.pc2.on{display:grid;animation:entra .45s}
+.pc2 h3{font-size:1.8rem;margin-bottom:10px}
+.pc2 p{font-size:1.1rem;color:var(--mut);max-width:34ch}
+@media(max-width:900px){.pc2{grid-template-columns:1fr}.bloques,.atq-cadena{grid-template-columns:1fr}.bloques .bq:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-32px}}
+/* Alterar y detectar */
+.atq-cadena{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.bq.ok{border-color:var(--ok);box-shadow:5px 5px 0 var(--ok)}
+.bq.err{border-color:var(--bad);box-shadow:5px 5px 0 var(--bad)}
+.bq .est{margin-top:10px;font:700 .82rem var(--mono)}
+.bq .est.ok{color:var(--ok)}.bq .est.err{color:var(--bad)}
+.acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.acc button{border:1.5px solid var(--fg);background:none;color:var(--fg);font:700 .72rem var(--disp);letter-spacing:.08em;text-transform:uppercase;padding:6px 9px;cursor:pointer}
+.acc button:hover{background:var(--fg);color:var(--bg)}
+.atq-pie{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start;margin-top:26px}
+.atq-pie .controles{margin-top:0;flex-direction:column;align-items:stretch}
+.atq-pie .leyenda{margin-top:0;min-height:5.5em;white-space:pre-line}
+@media(max-width:900px){.atq-pie{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="progreso"></div>
+
+<nav aria-label="Menú principal">
+  <div class="wrap">
+    <a class="marca" href="#inicio" data-go="#inicio">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#00ad62"/><text x="20" y="27" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="22" fill="#00245f">/</text></svg>
+      MonPoint
+    </a>
+    <div class="menu"><button type="button" aria-haspopup="true">Proyecto</button>
+      <div class="panel">
+        <a href="#por-que" data-go="#por-que">Por qué cambiamos<small>monolito → servicios</small></a>
+        <a href="#mapa" data-go="#mapa">Qué construimos<small>el mapa del sistema</small></a>
+      </div></div>
+    <div class="menu"><button type="button" aria-haspopup="true">Herramientas</button>
+      <div class="panel">
+        <a href="#herramientas" data-go="#herramientas" data-abrir="docker">Docker<small>contenedores</small></a>
+        <a href="#herramientas" data-go="#herramientas" data-abrir="gateway">API Gateway<small>la puerta única</small></a>
+        <a href="#herramientas" data-go="#herramientas" data-abrir="eureka">Eureka<small>el directorio</small></a>
+        <a href="#herramientas" data-go="#herramientas" data-abrir="rabbit">RabbitMQ<small>el buzón de avisos</small></a>
+        <a href="#herramientas" data-go="#herramientas" data-abrir="mongo">MongoDB<small>las bases de datos</small></a>
+      </div></div>
+    <div class="menu"><button type="button" aria-haspopup="true">En acción</button>
+      <div class="panel">
+        <a href="#venta" data-go="#venta">Una venta por dentro<small>paso a paso</small></a>
+        <a href="#alma" data-go="#alma">El alma del código<small>tres ideas reales</small></a>
+      </div></div>
+    <div class="menu"><button type="button" aria-haspopup="true">Valor</button>
+      <div class="panel">
+        <a href="#valor" data-go="#valor">Qué ganamos, qué costó<small>con honestidad</small></a>
+        <a href="#trabajo" data-go="#trabajo">Cómo lo trabajamos<small>y qué aprendimos</small></a>
+      </div></div>
+    <div class="menu"><button type="button" aria-haspopup="true">Criptografía</button>
+      <div class="panel">
+        <a href="#cadena" data-go="#cadena">El hash y la cadena<small>SHA-256 · MoinChain</small></a>
+        <a href="#bloque" data-go="#bloque">El bloque y su código<small>tres ideas reales</small></a>
+        <a href="#ataque" data-go="#ataque">Alterar y detectar<small>pruébalo tú</small></a>
+        <a href="#cripto-limites" data-go="#cripto-limites">Alcance y límites<small>qué sí, qué no</small></a>
+      </div></div>
+    <button class="auto on" id="auto" type="button" title="Recorrido automático (tecla A)"><i></i><span>AUTO</span></button>
+  </div>
+</nav>
+
+<!-- 0 · PORTADA -->
+<header class="hero d" id="inicio" data-dur="16">
+  <div class="wrap">
+    <div>
+      <div class="kick">Proyecto de microservicios · + criptografía</div>
+      <h1>Mon<span>Point</span></h1>
+      <p class="lema">De un programa único a seis servicios que cooperan.</p>
+      <p class="sub" style="margin-top:10px">Y una bitácora de seguridad encadenada con SHA-256: si alguien la altera, se nota.</p>
+      <div class="consola" id="consola" aria-live="off"></div>
+      <div class="hero-cifras">
+        <div><b data-n="6">0</b><span>servicios</span></div>
+        <div><b data-n="11">0</b><span>contenedores</span></div>
+        <div><b data-n="27">0</b><span>endpoints</span></div>
+        <div><b data-n="11">0</b><span>mensajes</span></div>
+      </div>
+    </div>
+    <svg class="logo-mov" viewBox="0 0 640 640" role="img" aria-label="Un endpoint en el centro recibe peticiones de los servicios">
+      <defs><path id="anillo" d="M50,320 a270,270 0 1,1 540,0 a270,270 0 1,1 -540,0"/></defs>
+      <g class="giro"><text font-family="Consolas,monospace" font-size="14" fill="#a9bbd6" letter-spacing="1"><textPath href="#anillo" textLength="1690" lengthAdjust="spacing">POST /auth/login  ·  GET /inventario/productos  ·  POST /ventas  ·  GET /ventas/{id}  ·  GET /clientes  ·  GET /notificaciones  ·  GET /reportes/ventas/agregado  ·  </textPath></text></g>
+      <g class="giro2" fill="none" stroke="#1f4a8f" stroke-width="1.5">
+        <circle cx="320" cy="320" r="215" stroke-dasharray="3 9"/>
+        <circle cx="320" cy="320" r="120" stroke-dasharray="2 7"/>
+      </g>
+      <g id="lineas" stroke="#3a68b0" stroke-width="1.5" stroke-dasharray="5 6" fill="none">
+        <path d="M320,145 L320,254"/><path d="M471.6,232.5 L377,287"/><path d="M471.6,407.5 L377,353"/>
+        <path d="M320,495 L320,386"/><path d="M168.4,407.5 L263,353"/><path d="M168.4,232.5 L263,287"/>
+      </g>
+      <g id="paquetes" fill="#00ad62">
+        <circle r="5"><animateMotion dur="2.6s" repeatCount="indefinite" path="M320,145 L320,254"/></circle>
+        <circle r="5" fill="#ffffff"><animateMotion dur="3.1s" begin="0.5s" repeatCount="indefinite" path="M471.6,232.5 L377,287"/></circle>
+        <circle r="5"><animateMotion dur="2.8s" begin="1.1s" repeatCount="indefinite" path="M471.6,407.5 L377,353"/></circle>
+        <circle r="5" fill="#ffffff"><animateMotion dur="3.3s" begin="0.2s" repeatCount="indefinite" path="M320,386 L320,495"/></circle>
+        <circle r="5"><animateMotion dur="2.9s" begin="1.6s" repeatCount="indefinite" path="M168.4,407.5 L263,353"/></circle>
+        <circle r="5" fill="#ffffff"><animateMotion dur="3s" begin="0.9s" repeatCount="indefinite" path="M263,287 L168.4,232.5"/></circle>
+      </g>
+      <g font-family="Consolas,monospace" font-size="13" text-anchor="middle" fill="#f4f8fc">
+        <g transform="translate(320,145)"><rect x="-52" y="-16" width="104" height="32" fill="#012f78" stroke="#dbe6f5" stroke-width="1.5"/><text y="5">ventas</text></g>
+        <g transform="translate(471.6,232.5)"><rect x="-52" y="-16" width="104" height="32" fill="#012f78" stroke="#dbe6f5" stroke-width="1.5"/><text y="5">inventario</text></g>
+        <g transform="translate(471.6,407.5)"><rect x="-52" y="-16" width="104" height="32" fill="#012f78" stroke="#dbe6f5" stroke-width="1.5"/><text y="5">clientes</text></g>
+        <g transform="translate(320,495)"><rect x="-52" y="-16" width="104" height="32" fill="#012f78" stroke="#dbe6f5" stroke-width="1.5"/><text y="5">reportes</text></g>
+        <g transform="translate(168.4,407.5)"><rect x="-52" y="-16" width="104" height="32" fill="#012f78" stroke="#dbe6f5" stroke-width="1.5"/><text y="5">notificac.</text></g>
+        <g transform="translate(168.4,232.5)"><rect x="-52" y="-16" width="104" height="32" fill="#012f78" stroke="#dbe6f5" stroke-width="1.5"/><text y="5">usuarios</text></g>
+      </g>
+      <g fill="none" stroke="#00ad62" stroke-width="2">
+        <circle cx="320" cy="320" r="70"><animate attributeName="r" values="70;150" dur="3.6s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0" dur="3.6s" repeatCount="indefinite"/></circle>
+        <circle cx="320" cy="320" r="70"><animate attributeName="r" values="70;150" dur="3.6s" begin="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0" dur="3.6s" begin="1.2s" repeatCount="indefinite"/></circle>
+        <circle cx="320" cy="320" r="70"><animate attributeName="r" values="70;150" dur="3.6s" begin="2.4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0" dur="3.6s" begin="2.4s" repeatCount="indefinite"/></circle>
+      </g>
+      <g class="latido"><polygon points="386,320 353,377.2 287,377.2 254,320 287,262.8 353,262.8" fill="#00ad62"/>
+        <text x="320" y="344" text-anchor="middle" font-family="Consolas,monospace" font-weight="700" font-size="84" fill="#00245f">/</text></g>
+      <text x="320" y="425" text-anchor="middle" font-family="Consolas,monospace" font-size="12" letter-spacing="3" fill="#a9bbd6">ENDPOINT · GATEWAY</text>
+    </svg>
+  </div>
+</header>
+
+<!-- 1 · POR QUÉ -->
+<section class="l" id="por-que" data-dur="13">
+  <div class="wrap">
+    <div class="kick">El punto de partida</div>
+    <h2>Antes todo junto. <em>Ahora</em> cada cosa en su lugar.</h2>
+    <div class="cols" style="margin-top:40px">
+      <div class="caja">
+        <h3><span class="tag">ANTES · MONOLITO</span>Un solo bloque</h3>
+        <div class="apila uno"><div>Ventas</div><div>Inventario</div><div>Clientes</div><div>Una base de datos</div></div>
+        <p>Java, JavaFX y MariaDB. Se prueba y se despliega todo junto.</p>
+      </div>
+      <div class="caja">
+        <h3><span class="tag">AHORA · MICROSERVICIOS</span>Piezas con base propia</h3>
+        <div class="malla"><div>Usuarios</div><div>Inventario</div><div>Clientes</div><div>Ventas</div><div>Reportes</div><div>Notificac.</div></div>
+        <p>Cada una en su contenedor. Se avisan con mensajes, no se llaman.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · MAPA -->
+<section class="d" id="mapa" data-dur="24">
+  <div class="wrap">
+    <div class="kick">Qué construimos</div>
+    <h2>Una puerta, <em>seis</em> servicios, un buzón</h2>
+    <div class="mapa">
+      <div class="lienzo">
+        <div class="fila"><button class="nodo" data-id="web">Interfaz web<small>Vue 3 + nginx</small></button></div>
+        <div class="sep">▼ siempre por el gateway</div>
+        <div class="fila">
+          <button class="nodo infra" data-id="gateway">Gateway<small>:8080</small></button>
+          <button class="nodo infra" data-id="eureka">Eureka<small>:8761</small></button>
+        </div>
+        <div class="sep">▼ cada servicio con su base</div>
+        <div class="fila">
+          <button class="nodo" data-id="auth">Usuarios<small>ms-auth</small></button>
+          <button class="nodo" data-id="inventario">Inventario<small>ms-inventario</small></button>
+          <button class="nodo" data-id="clientes">Clientes<small>ms-clientes</small></button>
+        </div>
+        <div class="fila">
+          <button class="nodo" data-id="ventas">Ventas<small>ms-ventas</small></button>
+          <button class="nodo" data-id="reportes">Reportes<small>ms-reportes</small></button>
+          <button class="nodo" data-id="notificaciones">Notificac.<small>ms-notificaciones</small></button>
+        </div>
+        <div class="sep">▲▼ avisos y datos</div>
+        <div class="fila">
+          <button class="nodo infra" data-id="rabbit">RabbitMQ<small>buzón</small></button>
+          <button class="nodo infra" data-id="mongo">MongoDB<small>6 bases</small></button>
+        </div>
+      </div>
+      <aside class="detalle" id="detalle" aria-live="polite"></aside>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · HERRAMIENTAS -->
+<section class="l" id="herramientas" data-dur="26">
+  <div class="wrap">
+    <div class="kick">Las herramientas</div>
+    <h2>Qué es cada cosa y <em>qué hace aquí</em></h2>
+    <div class="acordeon" id="acordeon"></div>
+  </div>
+</section>
+
+<!-- 4 · VENTA -->
+<section class="d" id="venta" data-dur="34">
+  <div class="wrap">
+    <div class="kick">En acción</div>
+    <h2>Una venta, <em>por dentro</em></h2>
+    <div class="venta">
+      <div>
+        <ol class="pasos" id="pasos"></ol>
+        <div class="controles">
+          <button class="bt" id="atras">◀</button>
+          <button class="bt" id="sig">Siguiente ▶</button>
+          <label class="interruptor"><input type="checkbox" id="falla"> ¿Y si no alcanza el stock?</label>
+        </div>
+      </div>
+      <div class="escena">
+        <svg viewBox="0 0 520 400" role="img" aria-label="Recorrido de una venta entre servicios">
+          <path class="ruta" id="r-gw" d="M260 62 V112"/>
+          <path class="ruta" id="r-ven" d="M260 168 V212"/>
+          <path class="ruta" id="r-mq1" d="M260 268 V312"/>
+          <path class="ruta" id="r-inv" d="M310 340 H395"/>
+          <rect class="zona" id="z-web" x="190" y="12" width="140" height="50"/><text class="zt" x="260" y="42">Interfaz web</text>
+          <rect class="zona" id="z-gw" x="190" y="112" width="140" height="56"/><text class="zt" x="260" y="136">Gateway</text><text class="zs" x="260" y="154">revisa el token</text>
+          <rect class="zona" id="z-ven" x="190" y="212" width="140" height="56"/><text class="zt" x="260" y="236">Ventas</text><text class="zs" x="260" y="254">folio + PENDIENTE</text>
+          <rect class="zona" id="z-mq" x="150" y="312" width="160" height="56"/><text class="zt" x="230" y="336">RabbitMQ</text><text class="zs" x="230" y="354">buzón de avisos</text>
+          <rect class="zona" id="z-inv" x="395" y="312" width="115" height="56"/><text class="zt" x="452" y="336">Inventario</text><text class="zs" x="452" y="354">descuenta</text>
+          <rect class="zona" id="z-rep" x="20" y="212" width="130" height="56"/><text class="zt" x="85" y="236">Reportes</text><text class="zs" x="85" y="254">suma ventas</text>
+          <rect class="zona" id="z-not" x="20" y="312" width="115" height="56"/><text class="zt" x="77" y="336">Notificac.</text><text class="zs" x="77" y="354">alerta</text>
+          <g id="sobre" class="sobre" style="transform:translate(260px,87px)"><rect x="-17" y="-12" width="34" height="24"/><path d="M-15 -9 L0 3 L15 -9" fill="none" stroke="#00245f" stroke-width="2"/></g>
+        </svg>
+        <div class="leyenda" id="leyenda"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · ALMA -->
+<section class="l" id="alma" data-dur="24">
+  <div class="wrap">
+    <div class="kick">El alma del proyecto</div>
+    <h2>Tres ideas <em>que lo hacen funcionar</em></h2>
+    <div class="pestanas" id="pestanas" role="tablist">
+      <button class="on" data-t="0" role="tab">Todo o nada</button>
+      <button data-t="1" role="tab">Sin duplicados</button>
+      <button data-t="2" role="tab">Recibido ≠ terminado</button>
+    </div>
+    <div class="panelcod on" data-p="0">
+      <div><h3>Descontar sin pasarse</h3><p>Solo descuenta si hay existencia. Si a un producto no le alcanza, se revierte toda la venta.</p></div>
+      <div><pre class="codigo"><span class="c">// busca el producto SOLO si alcanza…</span>
+Query hayExistencia = Query.query(
+  Criteria.where(<span class="s">"_id"</span>).is(productoId)
+    .and(<span class="s">"activo"</span>).is(<span class="k">true</span>)
+    .and(<span class="s">"existencia"</span>).gte(cantidad));
+<span class="c">// …y en el mismo paso, descuenta</span>
+Update descuento = <span class="k">new</span> Update()
+  .inc(<span class="s">"existencia"</span>, -cantidad);</pre><div class="fuente">ms-inventario · ReservaStockService.java</div></div>
+    </div>
+    <div class="panelcod" data-p="1">
+      <div><h3>Un mensaje puede llegar dos veces</h3><p>Cada aviso trae un número único. Si ya estaba anotado, se ignora y no se descuenta doble.</p></div>
+      <div><pre class="codigo">{
+  <span class="s">"eventoId"</span>: <span class="s">"74007b36-ace7-45de-…"</span>,
+  <span class="s">"tipo"</span>:     <span class="s">"StockReservado"</span>,
+  <span class="s">"version"</span>:  <span class="s">"1"</span>,
+  <span class="s">"origen"</span>:   <span class="s">"ms-inventario"</span>,
+  <span class="s">"datos"</span>: { <span class="s">"ventaId"</span>: <span class="s">"…"</span>, <span class="s">"lineas"</span>: [ … ] }
+}</pre><div class="fuente">docs/eventos/stock-reservado.md</div></div>
+    </div>
+    <div class="panelcod" data-p="2">
+      <div><h3>La respuesta honesta</h3><p>Al cobrar, ventas responde con un folio y estado PENDIENTE. Se confirma o cancela cuando inventario contesta.</p></div>
+      <div><pre class="codigo"><span class="n">POST</span> /ventas
+  → <span class="s">202</span> folio · PENDIENTE   <span class="c">(aceptada)</span>
+
+<span class="c">…inventario reserva y responde…</span>
+
+<span class="n">GET</span> /ventas/{id}
+  → <span class="s">CONFIRMADA</span>  <span class="c">o</span>  <span class="k">CANCELADA</span> + motivo</pre><div class="fuente">docs/api/ventas.md</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5b · CRIPTOGRAFÍA · EL HASH Y LA CADENA -->
+<section class="d" id="cadena" data-dur="16">
+  <div class="wrap">
+    <div class="kick">Criptografía · MoinChain</div>
+    <h2>Una bitácora que <em>no se puede</em> reescribir</h2>
+    <div class="cols" style="margin-top:36px">
+      <div class="caja">
+        <h3><span class="tag">EL PROBLEMA</span>Un log se edita sin dejar rastro</h3>
+        <p>El servicio de usuarios ya anotaba cada inicio de sesión, alta y baja, pero solo como líneas de texto. Quien tenga acceso al servidor puede cambiar una línea y nadie lo nota.</p>
+        <div class="log">evento=LOGIN_FALLIDO correo=… motivo=PASSWORD_INCORRECTA<br>evento=LOGIN_EXITOSO usuarioId=… rol=ADMIN<br><span class="bad">← ¿quién editó esta línea? No hay forma de saberlo.</span></div>
+      </div>
+      <div class="caja">
+        <h3><span class="tag">LA HERRAMIENTA · SHA-256</span>Una huella digital</h3>
+        <p>Cualquier texto se convierte en 64 caracteres. Cambia una sola letra y la huella cambia por completo. Pruébalo:</p>
+        <input id="av-in" class="entrada" value="evento=LOGIN_EXITOSO rol=ADMIN" spellcheck="false" aria-label="Texto para calcular su huella SHA-256">
+        <div class="hl"><small>HUELLA DEL TEXTO ORIGINAL</small><code id="av-a"></code></div>
+        <div class="hl"><small>HUELLA DE TU TEXTO (EN ROJO, LO QUE CAMBIÓ)</small><code id="av-b"></code></div>
+        <div class="leyenda" id="av-ley"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5c · CRIPTOGRAFÍA · EL BLOQUE -->
+<section class="l" id="bloque" data-dur="24">
+  <div class="wrap">
+    <div class="kick">Criptografía · La estructura</div>
+    <h2>Cada bloque <em>apunta</em> al anterior</h2>
+    <div class="bloques" id="bq-fila"></div>
+    <div class="formula">hash_actual = <b>SHA-256</b>( id <b>|</b> timestamp <b>|</b> datos <b>|</b> prev_hash )</div>
+    <div class="tabs2" id="tabs2" role="tablist">
+      <button class="on" data-t="0" role="tab">El hash</button>
+      <button data-t="1" role="tab">La verificación</button>
+      <button data-t="2" role="tab">Sin bifurcaciones</button>
+    </div>
+    <div class="pc2 on" data-p="0">
+      <div><h3>Una fórmula, en una clase</h3><p>Une los cuatro campos con “|” y calcula su SHA-256 en UTF-8. El tiempo va en milisegundos porque MongoDB no guarda más precisión.</p></div>
+      <div><pre class="codigo"><span class="c">// id | timestamp(ms) | datos | prev_hash</span>
+String entrada = id + <span class="s">"|"</span> + timestamp.toEpochMilli()
+    + <span class="s">"|"</span> + datos + <span class="s">"|"</span> + prevHash;
+MessageDigest digest = MessageDigest.getInstance(<span class="s">"SHA-256"</span>);
+<span class="k">byte</span>[] resumen = digest.digest(
+    entrada.getBytes(StandardCharsets.UTF_8));
+<span class="k">return</span> HexFormat.of().formatHex(resumen);  <span class="c">// 64 hex</span></pre><div class="fuente">ms-auth · CalculadorHash.java</div></div>
+    </div>
+    <div class="pc2" data-p="1">
+      <div><h3>Tres preguntas por bloque</h3><p>Recorre toda la cadena y no se detiene en el primer error: reporta cada bloque dañado y por qué.</p></div>
+      <div><pre class="codigo"><span class="k">for</span> (BloqueAuditoria bloque : bloques) {
+  <span class="c">// 1. ¿falta un número de bloque?</span>
+  <span class="k">if</span> (bloque.id() != idEsperado)        <span class="n">BLOQUE_FALTANTE</span>
+  <span class="c">// 2. ¿cambió su contenido?</span>
+  <span class="k">if</span> (!recalculado.equals(hashActual)) <span class="n">HASH_ALTERADO</span>
+  <span class="c">// 3. ¿apunta al hash del anterior?</span>
+  <span class="k">if</span> (!hashAnterior.equals(prevHash))  <span class="n">ENLACE_ROTO</span>
+  hashAnterior = bloque.hashActual();
+}</pre><div class="fuente">ms-auth · VerificadorCadena.java (resumido)</div></div>
+    </div>
+    <div class="pc2" data-p="2">
+      <div><h3>Dos eventos a la vez</h3><p>El número de bloque es la clave primaria. Si otro hilo se adelantó, la inserción falla y se reintenta con el número siguiente.</p></div>
+      <div><pre class="codigo"><span class="k">for</span> (<span class="k">int</span> intento = 1; intento &lt;= 5; intento++) {
+  ultimo = repositorio.findTopByOrderByIdDesc();
+  <span class="k">try</span> {
+    <span class="k">return</span> repositorio.insert(
+        BloqueAuditoria.crear(id, datos, prevHash));
+  } <span class="k">catch</span> (DuplicateKeyException e) {
+    <span class="c">// otro hilo se adelantó: reintenta</span>
+  }
+}</pre><div class="fuente">ms-auth · CadenaService.java (resumido)</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5d · CRIPTOGRAFÍA · ALTERAR Y DETECTAR -->
+<section class="d" id="ataque" data-dur="30">
+  <div class="wrap">
+    <div class="kick">Criptografía · Prueba de alteración</div>
+    <h2>Cambia un dato. <em>La cadena</em> lo delata</h2>
+    <div class="atq-cadena" id="atq-cadena"></div>
+    <div class="atq-pie">
+      <div class="controles">
+        <button class="bt" id="atq-ver" type="button">Verificar la cadena</button>
+        <button class="bt" id="atq-rest" type="button">Restaurar</button>
+      </div>
+      <div>
+        <div class="leyenda" id="atq-res" aria-live="polite"></div>
+        <div class="fuente">Los tres bloques son los de una ejecución real de ms-auth. Tu navegador recalcula SHA-256 de verdad: si no tocas nada, obtiene los mismos hashes que Java.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5e · CRIPTOGRAFÍA · ALCANCE Y LÍMITES -->
+<section class="l" id="cripto-limites" data-dur="20">
+  <div class="wrap">
+    <div class="kick">Criptografía · Alcance</div>
+    <h2>Lo que <em>sí</em> logra y lo que <em>no es</em></h2>
+    <div class="balance">
+      <div><h3>Logra</h3>
+        <ul>
+          <li>Detecta cualquier cambio<small>Datos alterados, bloques borrados o enlaces rotos; dice qué bloque y por qué.</small></li>
+          <li>Persiste<small>Los bloques siguen en MongoDB al reiniciar el servicio.</small></li>
+          <li>No estorba al login<small>Si la cadena falla, el inicio de sesión sigue y el error queda en el log.</small></li>
+          <li>Está comprobada<small>Otro programa (Node.js) calcula el mismo hash que Java.</small></li>
+        </ul></div>
+      <div class="cuesta"><h3>No es una blockchain completa</h3>
+        <ul>
+          <li>Un solo nodo<small>Sin consenso, sin red P2P y sin minería.</small></li>
+          <li>Sin firma digital<small>Prueba que no cambió, no quién lo escribió.</small></li>
+          <li>Reescritura total<small>Quien controle toda la base puede recalcular todos los hashes.</small></li>
+          <li>Truncado final<small>Borrar los últimos bloques no se nota sin una referencia externa.</small></li>
+        </ul></div>
+    </div>
+    <p class="nota">Mejoras posibles: firmar cada bloque (ECDSA o Ed25519), anclar el último hash fuera de la base, replicar la cadena en varios nodos y agrupar bloques en un árbol de Merkle.</p>
+    <div class="nums">
+      <div><b>97</b><span>pruebas en ms-auth</span></div>
+      <div><b>21</b><span>pruebas nuevas</span></div>
+      <div><b>3</b><span>rutas solo ADMIN</span></div>
+      <div><b>64</b><span>caracteres por hash</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · VALOR -->
+<section class="d" id="valor" data-dur="18">
+  <div class="wrap">
+    <div class="kick">El valor del proyecto</div>
+    <h2>Qué <em>ganamos</em> y qué nos <em>costó</em></h2>
+    <div class="balance">
+      <div><h3>Ganamos</h3>
+        <ul>
+          <li>Piezas independientes<small>Cada servicio con su base y su contenedor.</small></li>
+          <li>Datos separados<small>Un usuario de base de datos por servicio.</small></li>
+          <li>Nadie espera a nadie<small>Se comunican con mensajes, no con llamadas.</small></li>
+          <li>Todo o nada<small>Reserva atómica; los mensajes repetidos se ignoran.</small></li>
+        </ul></div>
+      <div class="cuesta"><h3>Nos costó</h3>
+        <ul>
+          <li>Confirmación con retraso<small>La venta pasa por “en proceso”.</small></li>
+          <li>Sin “outbox”<small>Un aviso podría perderse si RabbitMQ falla justo al guardar.</small></li>
+          <li>Confianza en la red interna<small>No hay cifrado entre servicios.</small></li>
+          <li>Sesión de 24 horas<small>Sin cancelar un token individual.</small></li>
+        </ul></div>
+    </div>
+    <p class="nota">No medimos tiempo ahorrado. Lo que demostramos es independencia entre piezas, y entendimos cuánto cuesta.</p>
+  </div>
+</section>
+
+<!-- 7 · TRABAJO -->
+<section class="l" id="trabajo" data-dur="18">
+  <div class="wrap">
+    <div class="kick">Cómo lo trabajamos</div>
+    <h2>Planeado, repartido, <em>comprobado</em></h2>
+    <div class="linea">
+      <div class="paso"><h3>Planear</h3><p>Alcance recortado de 234 a 144 puntos y 35 actividades.</p></div>
+      <div class="paso"><h3>Base</h3><p>Compose, MongoDB, RabbitMQ, Eureka, Gateway y JWT.</p></div>
+      <div class="paso"><h3>Servicios</h3><p>Inventario, clientes, ventas, reportes y notificaciones.</p></div>
+      <div class="paso"><h3>Interfaz y cierre</h3><p>Seis pantallas, PDF, pruebas y documento de cierre.</p></div>
+    </div>
+    <div class="nums">
+      <div><b>300+</b><span>pruebas automáticas</span></div>
+      <div><b>27</b><span>operaciones de API</span></div>
+      <div><b>16</b><span>colecciones en 6 bases</span></div>
+    </div>
+    <div class="aprende">
+      <p>Dividir es lo fácil. Lo difícil es qué pasa cuando algo falla a la mitad.</p>
+      <p>Los avisos reemplazan las llamadas… a cambio de estados intermedios.</p>
+      <p>Decir qué falta también es parte de entenderlo.</p>
+    </div>
+  </div>
+</section>
+
+<footer>MONPOINT · JAVA 21 · SPRING BOOT · MONGODB · RABBITMQ · DOCKER · VUE 3 · SHA-256 (MOINCHAIN) — INFORMACIÓN TOMADA DEL REPOSITORIO DEL PROYECTO</footer>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var reducido=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var ultimaHumana=0, HUMANO_MS=45000;
+function humano(){ return Date.now()-ultimaHumana<HUMANO_MS; }
+
+/* ---------- Consola de la portada ---------- */
+var llamadas=[
+  ["POST","/auth/login","ok","200","Token JWT emitido"],
+  ["POST","/ventas","ok","202","Aceptada · folio, PENDIENTE"],
+  ["GET","/ventas/{id}","ok","200","CONFIRMADA"],
+  ["POST","/inventario/productos","ok","201","Producto creado"],
+  ["DELETE","/clientes/{id}","ok","204","Sin contenido"],
+  ["GET","/clientes","bad","401","Sin token: rechazado por el Gateway"],
+  ["GET","/notificaciones","ok","200","Alertas de existencia baja"],
+  ["POST","/auth/cadena","ok","201","Bloque agregado · hash enlazado"],
+  ["GET","/auth/cadena/verificar","ok","200","Cadena válida · sin alteraciones"],
+  ["GET","/auth/cadena/verificar","bad","200","CADENA CORRUPTA · bloque 2 HASH_ALTERADO"]
+];
+var ci=0, con=$("#consola");
+function tickConsola(){
+  var l=llamadas[ci%llamadas.length]; ci++;
+  var d=document.createElement("div");
+  d.innerHTML='<span class="m">'+l[0]+'</span> '+l[1]+'<br><span class="'+l[2]+'">→ '+l[3]+'</span> '+l[4];
+  con.innerHTML=""; con.appendChild(d);
+}
+tickConsola(); setInterval(tickConsola,2800);
+
+/* ---------- Cifras ---------- */
+function contar(el){
+  var meta=+el.getAttribute("data-n");
+  if(reducido){el.textContent=meta;return;}
+  var t0=null,dur=1200;
+  function paso(t){ if(!t0)t0=t; var p=Math.min((t-t0)/dur,1); el.textContent=Math.round(meta*(1-Math.pow(1-p,3))); if(p<1)requestAnimationFrame(paso); }
+  requestAnimationFrame(paso);
+}
+$$(".hero-cifras b").forEach(contar);
+if(reducido) $$("#paquetes animateMotion").forEach(function(a){a.parentNode.removeChild(a);});
+
+/* ---------- Menús desplegables ---------- */
+var menus=$$(".menu");
+menus.forEach(function(m){
+  $("button",m).addEventListener("click",function(e){
+    e.stopPropagation();
+    var abierto=m.classList.contains("abierto");
+    menus.forEach(function(x){x.classList.remove("abierto");});
+    if(!abierto) m.classList.add("abierto");
+  });
+});
+document.addEventListener("click",function(){ menus.forEach(function(x){x.classList.remove("abierto");}); });
+$$("[data-go]").forEach(function(a){
+  a.addEventListener("click",function(e){
+    e.preventDefault();
+    var dest=$(a.getAttribute("data-go")); if(dest) dest.scrollIntoView({behavior:reducido?"auto":"smooth"});
+    var ab=a.getAttribute("data-abrir"); if(ab) abrirHerr(ab,true);
+    menus.forEach(function(x){x.classList.remove("abierto");});
+    if(document.activeElement) document.activeElement.blur();
+  });
+});
+
+/* ---------- Mapa ---------- */
+var info={
+  web:{t:"Interfaz web",r:"Vue 3 · nginx",q:"Las pantallas del cajero.",a:"Seis pantallas. Habla solo con el Gateway; el token vive en memoria."},
+  gateway:{t:"API Gateway",r:"Puerta única",q:"Revisa el token y manda cada petición al servicio correcto.",a:"Puerto 8080. Repone las cabeceras de usuario y rol desde el token."},
+  eureka:{t:"Eureka",r:"Directorio",q:"Donde cada servicio se anota al arrancar.",a:"El Gateway le pregunta dónde está cada uno. Panel en el puerto 8761."},
+  auth:{t:"Usuarios",r:"ms-auth · auth_db",q:"Usuarios, roles (ADMIN y VENDEDOR) y tokens JWT.",a:"Seis operaciones. Es el único servicio fuera del buzón de mensajes. En MoinChain, además, guarda una cadena de auditoría con hash (3 rutas, solo ADMIN)."},
+  inventario:{t:"Inventario",r:"ms-inventario · inventario_db",q:"Catálogo y existencias.",a:"Reserva stock de forma atómica y avisa cuando queda poco."},
+  clientes:{t:"Clientes",r:"ms-clientes · clientes_db",q:"Alta, consulta, búsqueda, cambio y baja.",a:"Avisa cuando se crea o cambia un cliente."},
+  ventas:{t:"Ventas",r:"ms-ventas · ventas_db",q:"Registra la venta con folio y la cierra según inventario.",a:"Guarda copias locales de productos y clientes, alimentadas por mensajes."},
+  reportes:{t:"Reportes",r:"ms-reportes · reportes_db",q:"Totales de ventas y documentos PDF.",a:"Arma sus propias cuentas desde los mensajes. Las canceladas no suman."},
+  notificaciones:{t:"Notificaciones",r:"ms-notificaciones · notificaciones_db",q:"Alertas de existencia baja.",a:"Consume solo el mensaje StockBajo."},
+  rabbit:{t:"RabbitMQ",r:"Buzón de mensajes",q:"Transporta los avisos entre servicios.",a:"Tres intercambios: inventario, clientes y ventas. Tras tres fallos, el mensaje va a una cola de fallidos."},
+  mongo:{t:"MongoDB",r:"Un servidor · seis bases",q:"Guarda los datos de cada servicio.",a:"Cada base con su usuario. Replica set de un nodo para transacciones; no es un clúster."}
+};
+var ordenMapa=["gateway","eureka","auth","inventario","clientes","ventas","reportes","notificaciones","rabbit","mongo","web"];
+var mi=0;
+function verNodo(id){
+  var d=info[id]; if(!d) return;
+  $$(".nodo").forEach(function(n){ n.classList.toggle("sel",n.getAttribute("data-id")===id); });
+  $("#detalle").innerHTML='<h3>'+d.t+'</h3><div class="rol">'+d.r+'</div><dl><dt>Qué hace</dt><dd>'+d.q+'</dd><dt>En MonPoint</dt><dd>'+d.a+'</dd></dl>';
+}
+$$(".nodo").forEach(function(n){ n.addEventListener("click",function(){ ultimaHumana=Date.now(); verNodo(n.getAttribute("data-id")); }); });
+verNodo("gateway");
+
+/* ---------- Herramientas (acordeón) ---------- */
+var herr=[
+ ["docker","Docker","Una caja con el programa y todo lo que necesita.","Cada servicio vive en su contenedor. Docker Compose levanta los 11 con un solo comando."],
+ ["gateway","API Gateway","La recepción: todos entran por ahí y se revisa quién eres.","Valida el token y manda cada petición al servicio correcto."],
+ ["eureka","Eureka","Un directorio telefónico de servicios.","Cada servicio se anota al arrancar. El Gateway le pregunta dónde está cada uno."],
+ ["rabbit","RabbitMQ","Un buzón compartido de avisos.","Es la única vía entre servicios. Si uno está caído, el aviso espera."],
+ ["mongo","MongoDB","Base de datos de documentos, como fichas.","Seis bases, una por servicio, cada una con su usuario."],
+ ["spring","Spring Boot","Una base para construir servicios web en Java.","Seis servicios, Gateway y Eureka, en Java 21."],
+ ["vue","Vue 3 + nginx","Vue arma las pantallas; nginx las entrega.","Seis pantallas. Habla solo con el Gateway."],
+ ["jwt","JWT","Un gafete digital firmado.","Dura 24 horas. En la interfaz vive solo en memoria: recargar cierra la sesión."],
+ ["sha","SHA-256","Una huella digital: cualquier texto da 64 caracteres, y un cambio mínimo la cambia por completo.","Cada evento de seguridad se convierte en un bloque cuyo hash incluye el del bloque anterior."],
+ ["cadena","Cadena de hashes","Registros enlazados: cada uno guarda la huella del anterior.","Si se modifica un bloque pasado, la verificación señala cuál y por qué. No es una blockchain completa: un solo nodo, sin firma."]
+];
+var ac=$("#acordeon");
+ac.innerHTML=herr.map(function(h,i){
+  return '<div class="item" data-h="'+h[0]+'"><button type="button" aria-expanded="false"><span class="n">'+(i<9?"0":"")+(i+1)+'</span><span>'+h[1]+'</span><span class="mas"></span></button>'+
+         '<div class="cuerpo"><div><div class="dos"><div><small>Qué es</small><p>'+h[2]+'</p></div><div><small>En MonPoint</small><p>'+h[3]+'</p></div></div></div></div></div>';
+}).join("");
+function abrirHerr(id,solo){
+  $$(".item",ac).forEach(function(it){
+    var on=it.getAttribute("data-h")===id;
+    it.classList.toggle("abre",on);
+    $("button",it).setAttribute("aria-expanded",on?"true":"false");
+  });
+  if(solo) ultimaHumana=Date.now();
+}
+$$(".item>button",ac).forEach(function(b){
+  b.addEventListener("click",function(){
+    var it=b.parentNode, id=it.getAttribute("data-h");
+    ultimaHumana=Date.now();
+    if(it.classList.contains("abre")){ it.classList.remove("abre"); b.setAttribute("aria-expanded","false"); }
+    else abrirHerr(id,false);
+  });
+});
+var hi=0; abrirHerr("docker");
+
+/* ---------- Venta por dentro ---------- */
+var normal=[
+ {t:"Cobrar en Caja",d:"La interfaz manda la venta al Gateway con el token.",z:["z-web","z-gw"],r:["r-gw"],m:[260,87],l:"El Gateway revisa el token. Si no sirve, la petición se rechaza aquí."},
+ {t:"Ventas la acepta",d:"Valida con sus copias locales, asigna folio y la deja PENDIENTE.",z:["z-ven"],r:["r-ven"],m:[260,190],l:"Responde 202 con el folio: “recibida”, todavía no “confirmada”."},
+ {t:"Avisa por el buzón",d:"Publica VentaCreada en RabbitMQ.",z:["z-mq"],r:["r-mq1"],m:[260,290],l:"Ventas no llama a inventario: deja un mensaje. Si estuviera caído, el mensaje esperaría."},
+ {t:"Inventario reserva",d:"Descuenta todas las líneas, o ninguna.",z:["z-inv"],r:["r-inv"],m:[352,340],l:"Anota el número del mensaje y descuenta solo si hay existencia. Un mensaje repetido se ignora."},
+ {t:"Responde",d:"Publica StockReservado.",z:["z-mq","z-inv"],r:["r-inv"],m:[352,340],l:"Si queda en su mínimo, avisa también StockBajo y Notificaciones crea una alerta."},
+ {t:"Se cierra la venta",d:"Ventas pasa a CONFIRMADA.",z:["z-ven","z-rep","z-not"],r:["r-ven"],m:[260,240],l:"Reportes suma la venta. La pantalla, que consultaba, muestra “Venta confirmada”."}
+];
+var falla=[normal[0],normal[1],normal[2],
+ {t:"Inventario revisa",d:"A un producto no le alcanza la existencia.",z:["z-inv"],r:["r-inv"],m:[352,340],e:1,l:"No hay existencia suficiente. Se revierte todo: no se descuenta nada."},
+ {t:"Responde: rechazo",d:"Publica StockRechazado con el motivo.",z:["z-mq","z-inv"],r:["r-inv"],m:[352,340],e:1,l:"El mensaje lleva el producto, el motivo y las cantidades disponible y solicitada."},
+ {t:"Se cancela la venta",d:"Ventas pasa a CANCELADA y guarda el motivo.",z:["z-ven"],r:["r-ven"],m:[260,240],e:1,l:"El cajero ve el motivo. Reportes no suma una venta cancelada."}
+];
+var idx=0, lista=$("#pasos");
+function modo(){ return $("#falla").checked?falla:normal; }
+function dibujar(){
+  var P=modo(); if(idx>=P.length) idx=P.length-1;
+  lista.innerHTML=P.map(function(p,i){
+    return '<li data-i="'+i+'" class="'+(i===idx?"on ":"")+(i<idx?"hecho ":"")+(p.e?"mal":"")+'"><span class="num">0'+(i+1)+'</span><div><b>'+p.t+'</b><span>'+p.d+'</span></div></li>';
+  }).join("");
+  $$("li",lista).forEach(function(li){ li.addEventListener("click",function(){ ultimaHumana=Date.now(); idx=+li.getAttribute("data-i"); dibujar(); }); });
+  var p=P[idx];
+  $$(".zona,.ruta").forEach(function(z){ z.classList.remove("act","err"); });
+  p.z.concat(p.r).forEach(function(id){ $("#"+id).classList.add(p.e?"err":"act"); });
+  var s=$("#sobre"); s.classList.toggle("err",!!p.e);
+  s.style.transform="translate("+p.m[0]+"px,"+p.m[1]+"px)";
+  $("#leyenda").textContent=p.l;
+  $("#atras").disabled=idx===0; $("#sig").disabled=idx===P.length-1;
+}
+$("#sig").addEventListener("click",function(){ ultimaHumana=Date.now(); if(idx<modo().length-1){idx++;dibujar();} });
+$("#atras").addEventListener("click",function(){ ultimaHumana=Date.now(); if(idx>0){idx--;dibujar();} });
+$("#falla").addEventListener("change",function(){ ultimaHumana=Date.now(); idx=0; dibujar(); });
+dibujar();
+
+/* ---------- Pestañas de código ---------- */
+var ti=0;
+function verPestana(i){
+  ti=i;
+  $$("#pestanas button").forEach(function(b){ b.classList.toggle("on",+b.getAttribute("data-t")===i); });
+  $$(".panelcod").forEach(function(p){ p.classList.toggle("on",+p.getAttribute("data-p")===i); });
+}
+$$("#pestanas button").forEach(function(b){ b.addEventListener("click",function(){ ultimaHumana=Date.now(); verPestana(+b.getAttribute("data-t")); }); });
+
+/* ---------- Criptografía (MoinChain) ---------- */
+/* SHA-256 propio y síncrono (constantes derivadas de raíces de primos), para recalcular en vivo */
+var sha256=(function(){
+  var K=[],H=[],p=[],n=2,i;
+  while(p.length<64){var pr=true;for(i=0;i<p.length;i++){if(n%p[i]===0){pr=false;break;}}if(pr)p.push(n);n++;}
+  function frac(x){return ((x-Math.floor(x))*4294967296)>>>0;}
+  for(i=0;i<64;i++)K[i]=frac(Math.cbrt(p[i]));
+  for(i=0;i<8;i++)H[i]=frac(Math.sqrt(p[i]));
+  function rotr(x,b){return (x>>>b)|(x<<(32-b));}
+  return function(texto){
+    var m=new TextEncoder().encode(texto), l=m.length;
+    var tot=((l+9+63)>>6)<<6, b=new Uint8Array(tot);
+    b.set(m); b[l]=0x80;
+    var dv=new DataView(b.buffer), bits=l*8;
+    dv.setUint32(tot-8,Math.floor(bits/4294967296)); dv.setUint32(tot-4,bits>>>0);
+    var h=H.slice(), w=new Array(64);
+    for(var o=0;o<tot;o+=64){
+      var t;
+      for(t=0;t<16;t++) w[t]=dv.getUint32(o+t*4);
+      for(t=16;t<64;t++){
+        var s0=rotr(w[t-15],7)^rotr(w[t-15],18)^(w[t-15]>>>3);
+        var s1=rotr(w[t-2],17)^rotr(w[t-2],19)^(w[t-2]>>>10);
+        w[t]=(w[t-16]+s0+w[t-7]+s1)>>>0;
+      }
+      var a=h[0],bb=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hh=h[7];
+      for(t=0;t<64;t++){
+        var S1=rotr(e,6)^rotr(e,11)^rotr(e,25), ch=(e&f)^(~e&g);
+        var t1=(hh+S1+ch+K[t]+w[t])>>>0;
+        var S0=rotr(a,2)^rotr(a,13)^rotr(a,22), mj=(a&bb)^(a&c)^(bb&c);
+        var t2=(S0+mj)>>>0;
+        hh=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=bb;bb=a;a=(t1+t2)>>>0;
+      }
+      h[0]=(h[0]+a)>>>0;h[1]=(h[1]+bb)>>>0;h[2]=(h[2]+c)>>>0;h[3]=(h[3]+d)>>>0;
+      h[4]=(h[4]+e)>>>0;h[5]=(h[5]+f)>>>0;h[6]=(h[6]+g)>>>0;h[7]=(h[7]+hh)>>>0;
+    }
+    return h.map(function(x){return ("00000000"+x.toString(16)).slice(-8);}).join("");
+  };
+})();
+
+/* Bloques reales de una ejecución de ms-auth (misma fórmula que CalculadorHash.java) */
+var CERO=new Array(65).join("0");
+var REAL=[
+  {id:1,ts:Date.parse("2026-11-24T22:40:59.955Z"),datos:"evento=LOGIN_FALLIDO correo=victor.ortiz@autotachi.mx motivo=PASSWORD_INCORRECTA",prev:CERO,hash:"e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc"},
+  {id:2,ts:Date.parse("2026-11-24T22:41:00.370Z"),datos:"evento=LOGIN_EXITOSO usuarioId=6b0612422191a1ab5ac4b53b correo=victor.ortiz@autotachi.mx rol=ADMIN",prev:"e33bae6f2516b393e1e925b206d8d9c12838735402b95e92eafd010c45b8e8fc",hash:"50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86"},
+  {id:3,ts:Date.parse("2026-11-24T22:41:00.445Z"),datos:"nota manual: inicio de la demostracion",prev:"50c9fb162d26fb5df5573a2f265c7180a9524899aec22e6da9628002cf7c4a86",hash:"2d76e7ee1ea979291b017ce3f9f3c0e7678011fb3522b92deeaed7b64f574eb4"}
+];
+function corto(h){ return h.slice(0,8)+"…"+h.slice(-4); }
+function fecha(ms){ return new Date(ms).toISOString().replace("T"," ").replace("Z",""); }
+function hBloque(b){ return sha256(b.id+"|"+b.ts+"|"+b.datos+"|"+b.prev); }
+function copiaReal(){ return REAL.map(function(b){ return {id:b.id,ts:b.ts,datos:b.datos,prev:b.prev,hash:b.hash}; }); }
+
+/* 1 · Efecto avalancha */
+var avRef="evento=LOGIN_EXITOSO rol=ADMIN";
+function avDibuja(){
+  var t=$("#av-in").value, a=sha256(avRef), b=sha256(t), d=0, h="";
+  for(var i=0;i<64;i++){ if(a.charAt(i)!==b.charAt(i)){ d++; h+="<mark>"+b.charAt(i)+"</mark>"; } else h+=b.charAt(i); }
+  $("#av-a").textContent=a; $("#av-b").innerHTML=h;
+  $("#av-ley").textContent=(t===avRef)?"Mismo texto, misma huella. Siempre.":d+" de 64 caracteres cambiaron por modificar el texto.";
+}
+$("#av-in").addEventListener("input",function(){ ultimaHumana=Date.now(); avDibuja(); });
+avDibuja();
+var avVars=["evento=LOGIN_EXITOSO rol=ADMIN","evento=LOGIN_EXITOSO rol=ADMIM","evento=LOGIN_EXITOSO rol=admin","evento=LOGIN_EXITOSO rol=ADMIN "], avi=0;
+function cadenaAuto(){ avi=(avi+1)%avVars.length; $("#av-in").value=avVars[avi]; avDibuja(); }
+
+/* 2 · Bloques enlazados (colores = mismo hash) */
+(function(){
+  var cls=["c1","c2","c3"];
+  $("#bq-fila").innerHTML=REAL.map(function(b,i){
+    var prev=(i===0)?'<span class="chip g">génesis · 64 ceros</span>':'<span class="chip '+cls[i-1]+'">'+corto(b.prev)+'</span>';
+    return '<div class="bq"><div class="bq-h">Bloque '+b.id+'</div><dl>'+
+      '<dt>id</dt><dd>'+b.id+'</dd>'+
+      '<dt>timestamp</dt><dd>'+fecha(b.ts)+'</dd>'+
+      '<dt>datos</dt><dd>'+b.datos.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</dd>'+
+      '<dt>prev_hash</dt><dd>'+prev+'</dd>'+
+      '<dt>hash_actual</dt><dd><span class="chip '+cls[i]+'">'+corto(b.hash)+'</span></dd></dl></div>';
+  }).join("");
+})();
+var bi=0;
+function verBq(i){
+  bi=i;
+  $$("#tabs2 button").forEach(function(b){ b.classList.toggle("on",+b.getAttribute("data-t")===i); });
+  $$(".pc2").forEach(function(p){ p.classList.toggle("on",+p.getAttribute("data-p")===i); });
+}
+$$("#tabs2 button").forEach(function(b){ b.addEventListener("click",function(){ ultimaHumana=Date.now(); verBq(+b.getAttribute("data-t")); }); });
+function bloqueAuto(){ verBq((bi+1)%3); }
+
+/* 3 · Alterar y detectar (misma lógica que VerificadorCadena.java) */
+var cad=copiaReal(), atqVer=false, ALT="evento=EDITADO POR EL ATACANTE";
+function verificarCadena(bl){
+  var pro=[], esperado=1, anterior=CERO;
+  bl.forEach(function(b){
+    if(b.id!==esperado) pro.push({id:b.id,tipo:"BLOQUE_FALTANTE",det:"se esperaba el bloque "+esperado+": se borró al menos uno"});
+    if(hBloque(b)!==b.hash) pro.push({id:b.id,tipo:"HASH_ALTERADO",det:"su contenido no coincide con su hash"});
+    if(b.prev!==anterior) pro.push({id:b.id,tipo:"ENLACE_ROTO",det:"prev_hash no es el hash del bloque anterior"});
+    anterior=b.hash; esperado=b.id+1;
+  });
+  return pro;
+}
+function atqDibuja(){
+  var pro=atqVer?verificarCadena(cad):[];
+  $("#atq-cadena").innerHTML=cad.map(function(b){
+    var mal=pro.filter(function(p){return p.id===b.id;});
+    var est="", clase="";
+    if(atqVer){ clase=mal.length?"err":"ok"; est='<div class="est '+clase+'">'+(mal.length?"✖ "+mal.map(function(p){return p.tipo;}).join(" + "):"✔ íntegro")+'</div>'; }
+    return '<div class="bq '+clase+'"><div class="bq-h">Bloque '+b.id+'</div><dl>'+
+      '<dt>datos</dt><dd>'+b.datos.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</dd>'+
+      '<dt>prev_hash</dt><dd>'+corto(b.prev)+'</dd>'+
+      '<dt>hash_actual</dt><dd>'+corto(b.hash)+'</dd></dl>'+est+
+      '<div class="acc"><button type="button" data-a="alt" data-i="'+b.id+'">Alterar datos</button>'+
+      '<button type="button" data-a="rec" data-i="'+b.id+'">Recalcular hash</button>'+
+      '<button type="button" data-a="del" data-i="'+b.id+'">Borrar</button></div></div>';
+  }).join("");
+  var r=$("#atq-res");
+  if(!atqVer) r.textContent="Sin verificar. Altera, recalcula o borra un bloque y pulsa “Verificar la cadena”.";
+  else if(!pro.length) r.textContent="✔ Cadena válida: "+cad.length+" bloque(s) verificados, sin alteraciones.";
+  else r.textContent="✖ CADENA CORRUPTA: "+pro.length+" problema(s)\n"+pro.map(function(p){return "Bloque "+p.id+" · "+p.tipo+" — "+p.det;}).join("\n");
+}
+function atqAccion(a,id){
+  var b=cad.filter(function(x){return x.id===id;})[0]; if(!b) return;
+  if(a==="alt") b.datos=ALT;
+  else if(a==="rec") b.hash=hBloque(b);
+  else if(a==="del") cad=cad.filter(function(x){return x.id!==id;});
+  atqVer=false; atqDibuja();
+}
+$("#atq-cadena").addEventListener("click",function(e){
+  var t=e.target; if(!t.getAttribute||!t.getAttribute("data-a")) return;
+  ultimaHumana=Date.now(); atqAccion(t.getAttribute("data-a"),+t.getAttribute("data-i"));
+});
+$("#atq-ver").addEventListener("click",function(){ ultimaHumana=Date.now(); atqVer=true; atqDibuja(); });
+$("#atq-rest").addEventListener("click",function(){ ultimaHumana=Date.now(); cad=copiaReal(); atqVer=false; atqDibuja(); });
+atqDibuja();
+var atqPasos=[
+  function(){ cad=copiaReal(); atqVer=true; atqDibuja(); },
+  function(){ atqAccion("alt",2); },
+  function(){ atqVer=true; atqDibuja(); },
+  function(){ atqAccion("rec",2); },
+  function(){ atqVer=true; atqDibuja(); },
+  function(){ cad=copiaReal(); atqAccion("del",2); },
+  function(){ atqVer=true; atqDibuja(); }
+], atqi=0;
+function ataqueAuto(){ atqPasos[atqi%atqPasos.length](); atqi++; }
+
+/* ---------- Recorrido automático ---------- */
+var secs=$$("header.hero, section"), actual=0, autoOn=!reducido, tSec=null, tInt=null;
+var barra=$("#progreso"), btnAuto=$("#auto");
+function marcaBoton(){ btnAuto.classList.toggle("on",autoOn); $("span",btnAuto).textContent=autoOn?"AUTO":"PAUSA"; }
+function barraReinicia(seg){
+  barra.style.transition="none"; barra.style.width="0";
+  if(!autoOn) return;
+  void barra.offsetWidth;
+  barra.style.transition="width "+seg+"s linear"; barra.style.width="100%";
+}
+function interno(){
+  var id=secs[actual].id;
+  if(humano()) return;
+  if(id==="mapa"){ mi=(mi+1)%ordenMapa.length; verNodo(ordenMapa[mi]); }
+  else if(id==="herramientas"){ hi=(hi+1)%herr.length; abrirHerr(herr[hi][0],false); }
+  else if(id==="venta"){
+    var P=modo();
+    if(idx<P.length-1){ idx++; dibujar(); }
+    else { $("#falla").checked=!$("#falla").checked; idx=0; dibujar(); }
+  }
+  else if(id==="alma"){ verPestana((ti+1)%3); }
+  else if(id==="cadena"){ cadenaAuto(); }
+  else if(id==="bloque"){ bloqueAuto(); }
+  else if(id==="ataque"){ ataqueAuto(); }
+}
+var intervalos={mapa:2300,herramientas:3000,venta:3000,alma:7000,cadena:3200,bloque:7000,ataque:3000};
+function armarInterno(){
+  clearInterval(tInt); tInt=null;
+  var id=secs[actual].id;
+  if(intervalos[id]) tInt=setInterval(interno,intervalos[id]);
+}
+function programar(){
+  clearTimeout(tSec); tSec=null;
+  var dur=+secs[actual].getAttribute("data-dur")||15;
+  barraReinicia(dur);
+  if(!autoOn) return;
+  tSec=setTimeout(function(){
+    if(humano()){ programar(); return; }
+    var sig=(actual+1)%secs.length, destino=secs[sig];
+    destino.scrollIntoView({behavior:reducido?"auto":"smooth"});
+    /* Respaldo: si el desplazamiento suave no llegó, salta directo */
+    setTimeout(function(){
+      if(!humano() && Math.abs(window.scrollY-destino.offsetTop)>8) window.scrollTo({top:destino.offsetTop,behavior:"instant"});
+    },1600);
+    actual=sig; armarInterno(); programar();
+  },dur*1000);
+}
+/* Qué sección se ve (para scroll manual) */
+if("IntersectionObserver" in window){
+  var vigia=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        var i=secs.indexOf(e.target);
+        if(i>=0 && i!==actual){ actual=i; armarInterno(); programar(); }
+      }
+    });
+  },{threshold:.55});
+  secs.forEach(function(s){ vigia.observe(s); });
+}
+["wheel","touchstart","keydown","pointerdown"].forEach(function(ev){
+  window.addEventListener(ev,function(){ ultimaHumana=Date.now(); },{passive:true});
+});
+btnAuto.addEventListener("click",function(){ autoOn=!autoOn; ultimaHumana=0; marcaBoton(); programar(); });
+window.addEventListener("keydown",function(e){
+  if(e.key==="a"||e.key==="A"){ autoOn=!autoOn; ultimaHumana=0; marcaBoton(); programar(); }
+});
+marcaBoton(); armarInterno(); programar();
+})();
+</script>
+</body>
+</html>
